@@ -164,6 +164,21 @@ class Media(Cog):
         await ctx.respond(content = f"Converting image to gif {self.bot.get_emojis('loading_emoji')}")
         if not image and not url:
             raise discord.errors.ApplicationCommandError("No image or URL provided")
+        
+        # If url is a message ID, try to get the message and its attachments
+        if url and url.isdigit():
+            try:
+                message = await ctx.channel.fetch_message(int(url))
+                if message.attachments:
+                    image = message.attachments[0]
+                    url = None
+                else:
+                    raise discord.errors.ApplicationCommandError("No image found in the referenced message")
+            except discord.NotFound:
+                raise discord.errors.ApplicationCommandError("Message not found")
+            except discord.Forbidden:
+                raise discord.errors.ApplicationCommandError("Cannot access the referenced message")
+        
         file = await image_to_gif(image, url)
         await ctx.edit(content = f"", file=file)
         os.remove(file.fp.name)
