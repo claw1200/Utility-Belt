@@ -225,7 +225,12 @@ def unit_conversion(value: float, unit_from: str, unit_to: str):
         raise discord.errors.ApplicationCommandError("Invalid unit")
 
     # Perform the conversion
-    converted_value = (value * unit_from.to(unit_to)).magnitude
+    try:
+        converted_value = (value * unit_from.to(unit_to)).magnitude
+    except pint.errors.DimensionalityError:
+        raise discord.errors.ApplicationCommandError("Cannot convert between these units - they are not compatible")
+    except AttributeError:
+        raise discord.errors.ApplicationCommandError("Invalid unit")
     unit_from = str(unit_from).split(" ")[1]
     unit_to = str(unit_to).split(" ")[1]
 
