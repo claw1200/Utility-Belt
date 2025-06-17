@@ -10,6 +10,6 @@ pillow~=11.1.0
 pint~=0.24.4
 numpy~=2.2.1
 py-dateutil
-discord~=2.3.2
 requests~=2.32.3
+gradio_client
 yt_dlp
