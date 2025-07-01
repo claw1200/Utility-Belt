@@ -9,6 +9,7 @@ from tempfile import NamedTemporaryFile
 import aiohttp
 import datetime
 import yt_dlp
+import textwrap
 
 async def image_to_gif(image, url):
     """Convert an image from a URL to a gif and return it as a file path"""
@@ -219,7 +220,6 @@ class Media(Cog):
     )
     async def image_to_gif_command(self, ctx: Context, image: discord.Attachment = None, url: str = None):
         """Convert an image to a gif using image_to_gif"""
-        await ctx.defer()
         await ctx.respond(content = f"Converting image to gif {self.bot.get_emojis('loading_emoji')}")
         if not image and not url:
             raise discord.errors.ApplicationCommandError("No image or URL provided")
@@ -239,6 +239,23 @@ class Media(Cog):
                 raise discord.errors.ApplicationCommandError("Cannot access the referenced message")
         
         file = await image_to_gif(image, url)
+        await ctx.edit(content = f"", file=file)
+        os.remove(file.fp.name)
+
+    @discord.message_command(
+        integration_types={
+            discord.IntegrationType.guild_install,
+            discord.IntegrationType.user_install,
+        },
+        name="image-to-gif",
+        description="Convert an image to a gif"
+    )
+    async def image_to_gif_message_command(self, ctx: Context, message: discord.Message):
+        """Convert an image to a gif using image_to_gif"""
+        await ctx.respond(content = f"Converting image to gif {self.bot.get_emojis('loading_emoji')}")
+        if not message.attachments:
+            raise discord.errors.ApplicationCommandError("No image attached to message")
+        file = await image_to_gif(message.attachments[0], message.attachments[0].url)
         await ctx.edit(content = f"", file=file)
         os.remove(file.fp.name)
 
@@ -272,7 +289,6 @@ class Media(Cog):
     )
     async def speech_bubble_command(self, ctx: Context, image: discord.Attachment = None, url: str = None, user: discord.User = None, overlay_y: int = 2):
         """Add a speech bubble to an image using speech_bubble"""
-        await ctx.defer()
         await ctx.respond(content = f"Adding speech bubble to image {self.bot.get_emojis('loading_emoji')}")
         if not image and not url and not user:
             raise discord.errors.ApplicationCommandError("No image or URL provided")
@@ -283,6 +299,24 @@ class Media(Cog):
         file = await speech_bubble(image, url, overlay_y)
         await ctx.edit(content = f"", file=file)
         os.remove(file.fp.name)
+
+    @discord.message_command(
+        integration_types={
+            discord.IntegrationType.guild_install,
+            discord.IntegrationType.user_install,
+        },
+        name="speech-bubble",
+        description="Add a speech bubble to an image"
+    )
+    async def speech_bubble_message_command(self, ctx: Context, message: discord.Message):
+        """Add a speech bubble to an image using speech_bubble"""
+        await ctx.respond(content = f"Adding speech bubble to image {self.bot.get_emojis('loading_emoji')}")
+        if not message.attachments:
+            raise discord.errors.ApplicationCommandError("No image attached to message")
+        file = await speech_bubble(message.attachments[0], message.attachments[0].url, 2)
+        await ctx.edit(content = f"", file=file)
+        os.remove(file.fp.name)
+
 
     @discord.slash_command(
         integration_types={
@@ -376,7 +410,6 @@ class Media(Cog):
     )
     async def caption_command(self, ctx: Context, caption_text: str, image: discord.Attachment = None, url: str = None):
         """Add a meme-style caption above an image or gif"""
-        await ctx.defer()
         await ctx.respond(content = f"Adding caption... {self.bot.get_emojis('loading_emoji')}")
         if not image and not url:
             raise discord.errors.ApplicationCommandError("No image or URL provided")
