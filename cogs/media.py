@@ -4,7 +4,7 @@ import asyncio
 from functools import partial
 import yt_dlp.version
 from core import Cog, Context, utils
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageSequence
 from tempfile import NamedTemporaryFile
 import aiohttp
 import datetime
@@ -136,6 +136,64 @@ async def upload_to_catbox(file): # pass a discord.File object
                 return text
         return await post(data)
 
+async def add_caption(image, url, caption_text):
+    """Add a caption above an image or gif, extending the canvas with a white background, wrapping text into multiple lines if needed."""
+    font_path = "assets/Futura Extra Bold Condensed.otf"
+    image = await utils.image_or_url(image, url)
+    is_animated = getattr(image, "is_animated", False)
+    frames = []
+    duration = image.info.get("duration", 100)
+    def process_frame(frame):
+        frame = frame.convert("RGBA")
+        width, height = frame.size
+        # Fixed bar height and font size (13% of image height)
+        bar_height = int(height * 0.13)
+        font_size = int(bar_height * 0.7)
+        font = ImageFont.truetype(font_path, font_size)
+        # Wrap text so each line fits the image width
+        words = caption_text.split()
+        lines = []
+        current_line = ""
+        draw = ImageDraw.Draw(frame)
+        for word in words:
+            test_line = current_line + (" " if current_line else "") + word
+            bbox = draw.textbbox((0,0), test_line, font=font)
+            if bbox[2] - bbox[0] <= width - 20:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+        total_bar_height = bar_height * len(lines)
+        new_img = Image.new("RGBA", (width, height + total_bar_height), (255,255,255,255))
+        # Paste original image below the bars
+        new_img.paste(frame, (0, total_bar_height), frame)
+        draw = ImageDraw.Draw(new_img)
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0,0), line, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+            x = (width - text_width) // 2
+            y = int(i * bar_height + (bar_height - text_height) // 2)
+            draw.text((x, y), line, font=font, fill="black")
+        return new_img.convert("RGB")
+    if is_animated:
+        for frame in ImageSequence.Iterator(image):
+            frames.append(process_frame(frame))
+        frames_p = [f.convert("P", dither=Image.NONE, palette=Image.ADAPTIVE) for f in frames]
+        with NamedTemporaryFile(prefix="utilitybelt_", suffix=".gif", delete=False) as temp_gif:
+            frames_p[0].save(temp_gif, save_all=True, append_images=frames_p[1:], format="GIF", duration=duration, loop=0, disposal=2)
+            temp_gif.seek(0)
+            return discord.File(fp=temp_gif.name)
+    else:
+        new_img = process_frame(image)
+        with NamedTemporaryFile(prefix="utilitybelt_", suffix=".png", delete=False) as temp_img:
+            new_img.save(temp_img, format="PNG")
+            temp_img.seek(0)
+            return discord.File(fp=temp_img.name)
+
 class Media(Cog):
     """Media Commands"""
 
@@ -161,6 +219,7 @@ class Media(Cog):
     )
     async def image_to_gif_command(self, ctx: Context, image: discord.Attachment = None, url: str = None):
         """Convert an image to a gif using image_to_gif"""
+        await ctx.defer()
         await ctx.respond(content = f"Converting image to gif {self.bot.get_emojis('loading_emoji')}")
         if not image and not url:
             raise discord.errors.ApplicationCommandError("No image or URL provided")
@@ -213,6 +272,7 @@ class Media(Cog):
     )
     async def speech_bubble_command(self, ctx: Context, image: discord.Attachment = None, url: str = None, user: discord.User = None, overlay_y: int = 2):
         """Add a speech bubble to an image using speech_bubble"""
+        await ctx.defer()
         await ctx.respond(content = f"Adding speech bubble to image {self.bot.get_emojis('loading_emoji')}")
         if not image and not url and not user:
             raise discord.errors.ApplicationCommandError("No image or URL provided")
@@ -287,6 +347,42 @@ class Media(Cog):
             else:
                 await ctx.edit(content = f"Failed to upload to catbox.moe (file is probably still too big)")
         os.remove(str(file.fp.name))
+
+    @discord.slash_command(
+        integration_types={
+            discord.IntegrationType.guild_install,
+            discord.IntegrationType.user_install,
+        },
+        name="caption",
+        description="Add a caption above an image or gif (meme style)"
+    )
+    @discord.option(
+        "caption_text",
+        description="The caption text to add above the image",
+        type=str,
+        required=True
+    )
+    @discord.option(
+        "url",
+        description="The URL of the image or gif",
+        type=str,
+        required=False
+    )
+    @discord.option(
+        "image",
+        description="The image or gif to caption",
+        type=discord.Attachment,
+        required=False
+    )
+    async def caption_command(self, ctx: Context, caption_text: str, image: discord.Attachment = None, url: str = None):
+        """Add a meme-style caption above an image or gif"""
+        await ctx.defer()
+        await ctx.respond(content = f"Adding caption... {self.bot.get_emojis('loading_emoji')}")
+        if not image and not url:
+            raise discord.errors.ApplicationCommandError("No image or URL provided")
+        file = await add_caption(image, url, caption_text)
+        await ctx.edit(content = f"", file=file)
+        os.remove(file.fp.name)
 
 def setup(bot):
     bot.add_cog(Media(bot))
