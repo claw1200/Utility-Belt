@@ -2,14 +2,12 @@ import discord
 import os
 import asyncio
 from functools import partial
-import yt_dlp.version
 from core import Cog, Context, utils
 from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageSequence
 from tempfile import NamedTemporaryFile
 import aiohttp
 import datetime
 import yt_dlp
-import textwrap
 
 async def image_to_gif(image, url):
     """Convert an image from a URL to a gif and return it as a file path"""
@@ -136,6 +134,32 @@ async def upload_to_catbox(file): # pass a discord.File object
                     return None
                 return text
         return await post(data)
+
+async def upload_to_imgur(file): # pass a discord.File object
+    """Upload media to Imgur anonymously and return the album URL"""
+    async with aiohttp.ClientSession() as session:
+        try:
+            # Read the file
+            with open(file.fp.name, 'rb') as f:
+                file_data = f.read()
+            
+            # Prepare the form data
+            data = aiohttp.FormData()
+            data.add_field('image', file_data, filename=file.filename)
+            
+            # Upload to Imgur's anonymous upload endpoint
+            async with session.post('https://api.imgur.com/3/image', data=data) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    direct_link = result['data']['link']
+                    image_id = direct_link.split('/')[-1].split('.')[0]
+                    imgur_link = f"https://imgur.com/{image_id}"
+                    return imgur_link
+                else:
+                    error_text = await response.text()
+                    raise discord.errors.ApplicationCommandError(f"Failed to convert to gif: {error_text}")
+        except Exception as e:
+            raise discord.errors.ApplicationCommandError(f"Failed to convert to gif: {str(e)}")
 
 async def add_caption(image, url, caption_text):
     """Add a caption above an image or gif, extending the canvas with a white background, wrapping text into multiple lines if needed."""
@@ -381,6 +405,95 @@ class Media(Cog):
             else:
                 await ctx.edit(content = f"Failed to upload to catbox.moe (file is probably still too big)")
         os.remove(str(file.fp.name))
+
+    @discord.slash_command(
+        integration_types={
+            discord.IntegrationType.guild_install,
+            discord.IntegrationType.user_install,
+        },
+        name="video-to-gif",
+        description="Convert video to a gif"
+    )
+    @discord.option(
+        "url",
+        description="The URL of the video/media to upload",
+        type=str,
+        required=False
+    )
+    @discord.option(
+        "media",
+        description="The video/media file to upload",
+        type=discord.Attachment,
+        required=False
+    )
+    async def video_to_gif_command(self, ctx: Context, media: discord.Attachment = None, url: str = None):
+        """Convert video to a gif"""
+        await ctx.respond(content = f"Converting media to gif {self.bot.get_emojis('loading_emoji')}")
+        # If url is a message ID, try to get the message and its attachments
+        if url and url.isdigit():
+            try:
+                message = await ctx.channel.fetch_message(int(url))
+                if message.attachments:
+                    media = message.attachments[0]
+                    url = None
+                else:
+                    raise discord.errors.ApplicationCommandError("No media found in the referenced message")
+            except discord.NotFound:
+                raise discord.errors.ApplicationCommandError("Message not found")
+            except discord.Forbidden:
+                raise discord.errors.ApplicationCommandError("Cannot access the referenced message")
+        
+        # Download the media if it's a URL
+        if url:
+            file = await download_media_ytdlp(url, "auto", "auto", "auto")
+        else:
+            # For attachments, we need to download them first
+            async with aiohttp.ClientSession() as session:
+                async with session.get(media.url) as response:
+                    if response.status != 200:
+                        raise discord.errors.ApplicationCommandError("Failed to download media")
+                    
+                    # Create a temporary file
+                    with NamedTemporaryFile(prefix="utilitybelt_", suffix=f".{media.filename.split('.')[-1]}", delete=False) as temp_file:
+                        temp_file.write(await response.read())
+                        temp_file.seek(0)
+                        file = discord.File(fp=temp_file.name)
+        
+        # Upload to Imgur
+        imgur_url = await upload_to_imgur(file)
+        await ctx.edit(content = f"Uploaded to Imgur: {imgur_url}")
+        os.remove(file.fp.name)
+
+    @discord.message_command(
+        integration_types={
+            discord.IntegrationType.guild_install,
+            discord.IntegrationType.user_install,
+        },
+        name="video-to-gif",
+        description="Upload video/media to Imgur as a GIF"
+    )
+    async def video_to_gif_message_command(self, ctx: Context, message: discord.Message):
+        """Upload video/media to Imgur as a GIF"""
+        await ctx.respond(content = f"Converting media to gif {self.bot.get_emojis('loading_emoji')}")
+        if not message.attachments:
+            raise discord.errors.ApplicationCommandError("No media attached to message")
+        
+        # Download the attachment
+        async with aiohttp.ClientSession() as session:
+            async with session.get(message.attachments[0].url) as response:
+                if response.status != 200:
+                    raise discord.errors.ApplicationCommandError("Failed to download media")
+                
+                # Create a temporary file
+                with NamedTemporaryFile(prefix="utilitybelt_", suffix=f".{message.attachments[0].filename.split('.')[-1]}", delete=False) as temp_file:
+                    temp_file.write(await response.read())
+                    temp_file.seek(0)
+                    file = discord.File(fp=temp_file.name)
+        
+        # Upload to Imgur
+        imgur_url = await upload_to_imgur(file)
+        await ctx.edit(content = f"{imgur_url}")
+        os.remove(file.fp.name)
 
     @discord.slash_command(
         integration_types={

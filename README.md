@@ -14,11 +14,12 @@ Check out what it can do and add the [official version of Utility Belt](https://
 
 ## 📋 Commands
 <details>
-<summary> 📺 Media (4)</summary>
+<summary> 📺 Media (5)</summary>
 
 - `/image-to-gif`: Convert any image you can save it to your gif folder
 - `/speech-bubble`: Add a transparent speech bubble to an image or gif
 - `/download`: Download (almost) any media. Supports YouTube, Instagram, Twitter, SoundCloud, and more
+- `/video-to-gif`: Upload video/media to Imgur as a GIF
 
 </details>
 <details>
