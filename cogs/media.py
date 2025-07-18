@@ -461,7 +461,7 @@ class Media(Cog):
         
         # Upload to Imgur
         imgur_url = await upload_to_imgur(file)
-        await ctx.edit(content = f"Uploaded to Imgur: {imgur_url}")
+        await ctx.edit(content = f"{imgur_url}")
         os.remove(file.fp.name)
 
     @discord.message_command(
@@ -524,8 +524,6 @@ class Media(Cog):
     async def caption_command(self, ctx: Context, caption_text: str, image: discord.Attachment = None, url: str = None):
         """Add a meme-style caption above an image or gif"""
         await ctx.respond(content = f"Adding caption... {self.bot.get_emojis('loading_emoji')}")
-        if not image and not url:
-            raise discord.errors.ApplicationCommandError("No image or URL provided")
         file = await add_caption(image, url, caption_text)
         await ctx.edit(content = f"", file=file)
         os.remove(file.fp.name)
