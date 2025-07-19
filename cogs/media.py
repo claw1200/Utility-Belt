@@ -8,6 +8,8 @@ from tempfile import NamedTemporaryFile
 import aiohttp
 import datetime
 import yt_dlp
+import pyimgur
+from os import getenv
 
 async def image_to_gif(image, url):
     """Convert an image from a URL to a gif and return it as a file path"""
@@ -136,30 +138,22 @@ async def upload_to_catbox(file): # pass a discord.File object
         return await post(data)
 
 async def upload_to_imgur(file): # pass a discord.File object
-    """Upload media to Imgur anonymously and return the album URL"""
-    async with aiohttp.ClientSession() as session:
-        try:
-            # Read the file
-            with open(file.fp.name, 'rb') as f:
-                file_data = f.read()
-            
-            # Prepare the form data
-            data = aiohttp.FormData()
-            data.add_field('image', file_data, filename=file.filename)
-            
-            # Upload to Imgur's anonymous upload endpoint
-            async with session.post('https://api.imgur.com/3/image', data=data) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    direct_link = result['data']['link']
-                    image_id = direct_link.split('/')[-1].split('.')[0]
-                    imgur_link = f"https://imgur.com/{image_id}"
-                    return imgur_link
-                else:
-                    error_text = await response.text()
-                    raise discord.errors.ApplicationCommandError(f"Failed to convert to gif: {error_text}")
-        except Exception as e:
-            raise discord.errors.ApplicationCommandError(f"Failed to convert to gif: {str(e)}")
+    """Upload media to Imgur using official API and return the URL"""
+    imgur_client_id = getenv("IMGUR_CLIENT_ID")
+    if not imgur_client_id:
+        raise discord.errors.ApplicationCommandError("Imgur API not configured. Please set IMGUR_CLIENT_ID environment variable.")
+    
+    # Run blocking operations in thread pool
+    loop = asyncio.get_event_loop()
+    try:
+        client = pyimgur.Imgur(imgur_client_id)
+        result = await loop.run_in_executor(
+            None,
+            lambda: client.upload_image(file.fp.name, title="Uploaded via Utility Belt")
+        )
+        return result.link
+    except Exception as e:
+        raise discord.errors.ApplicationCommandError(f"Failed to upload to Imgur: {str(e)}")
 
 async def add_caption(image, url, caption_text):
     """Add a caption above an image or gif, extending the canvas with a white background, wrapping text into multiple lines if needed."""

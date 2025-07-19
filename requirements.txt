@@ -13,3 +13,4 @@ py-dateutil
 requests~=2.32.3
 gradio_client
 yt_dlp
+pyimgur
