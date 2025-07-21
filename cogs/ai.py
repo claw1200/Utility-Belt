@@ -152,4 +152,6 @@ class Ai(Cog):
 
 
 def setup(bot):
-    bot.add_cog(Ai(bot))
+    #bot.add_cog(Ai(bot))
+    pass
+
