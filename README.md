@@ -54,4 +54,4 @@ Check out what it can do and add the [official version of Utility Belt](https://
 4. Wait for your pull request to be reviewed and merged
 
 ## 🐞 Bugs / Suggestions
-Feel free to [create an issue](https://github.com/CLAW1200/Utility-Belt/issues/new) or [join the Support Server](https://discord.gg/pApCNNVhy5).
+Feel free to [create an issue](https://github.com/CLAW1200/Utility-Belt/issues/new) or [join the Support Server](https://discord.gg/Kgdu8J6F2y).

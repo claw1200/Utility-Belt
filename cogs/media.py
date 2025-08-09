@@ -141,7 +141,7 @@ async def upload_to_imgur(file): # pass a discord.File object
     """Upload media to Imgur using official API and return the URL"""
     imgur_client_id = getenv("IMGUR_CLIENT_ID")
     if not imgur_client_id:
-        raise discord.errors.ApplicationCommandError("Imgur API not configured. Please set IMGUR_CLIENT_ID environment variable.")
+        raise discord.errors.ApplicationCommandError("Imgur API not configured")
     
     # Run blocking operations in thread pool
     loop = asyncio.get_event_loop()

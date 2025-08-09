@@ -89,7 +89,7 @@ class Bot(commands.Bot):
                     "In the meantime, consider joining the support server.",
                     view=discord.ui.View(
                         discord.ui.Button(
-                            label="Support", url="https://discord.gg/pApCNNVhy5"
+                            label="Support", url="https://discord.gg/Kgdu8J6F2y"
                         ),
                         discord.ui.Button(
                             label="GitHub",
