@@ -423,6 +423,11 @@ class Media(Cog):
     async def video_to_gif_command(self, ctx: Context, media: discord.Attachment = None, url: str = None):
         """Convert video to a gif"""
         await ctx.respond(content = f"Converting media to gif {self.bot.get_emojis('loading_emoji')}")
+        
+        # Check if no options are provided
+        if not media and not url:
+            raise discord.errors.ApplicationCommandError("No media or URL provided")
+        
         # If url is a message ID, try to get the message and its attachments
         if url and url.isdigit():
             try:
