@@ -18,7 +18,7 @@ async def image_to_gif(image, url):
         image.save(temp_gif, format="PNG", save_all=True, append_images=[image])
         temp_gif.seek(0)
         return discord.File(fp=temp_gif.name)
-    
+
 async def get_user_avatar(user: discord.User):
     """Get a user's avatar"""
     user_avatar = user.avatar
@@ -42,7 +42,7 @@ async def speech_bubble(image, url, overlay_y):
 
     frame = ImageChops.composite(output, image, output)
     frame = ImageChops.subtract(image, output)
-    
+
     with NamedTemporaryFile(prefix="utilitybelt_",  suffix=".gif", delete=False) as temp_image:
         frame.save(temp_image, format="PNG")
         temp_image.seek(0)
@@ -101,7 +101,7 @@ async def download_media_ytdlp(url, download_mode, video_quality, audio_format):
         # print available codecs
         # for format in info["formats"]:
         #     format_id = format.get("format_id", "N/A")
-        #     ext = format.get("ext", "N/A") 
+        #     ext = format.get("ext", "N/A")
         #     height = format.get("height", "N/A")
         #     vcodec = format.get("vcodec", "N/A")
         #     acodec = format.get("acodec", "N/A")
@@ -119,7 +119,7 @@ async def download_media_ytdlp(url, download_mode, video_quality, audio_format):
     print (filepath)
 
     return discord.File(fp=filepath)
-  
+
 async def upload_to_catbox(file): # pass a discord.File object
     """Upload media to catbox.moe with curl and return the URL"""
     file_raw = open(file.fp.name, "rb")
@@ -142,7 +142,7 @@ async def upload_to_imgur(file): # pass a discord.File object
     imgur_client_id = getenv("IMGUR_CLIENT_ID")
     if not imgur_client_id:
         raise discord.errors.ApplicationCommandError("Imgur API not configured")
-    
+
     # Run blocking operations in thread pool
     loop = asyncio.get_event_loop()
     try:
@@ -241,7 +241,7 @@ class Media(Cog):
         await ctx.respond(content = f"Converting image to gif {self.bot.get_emojis('loading_emoji')}")
         if not image and not url:
             raise discord.errors.ApplicationCommandError("No image or URL provided")
-        
+
         # If url is a message ID, try to get the message and its attachments
         if url and url.isdigit():
             try:
@@ -255,7 +255,7 @@ class Media(Cog):
                 raise discord.errors.ApplicationCommandError("Message not found")
             except discord.Forbidden:
                 raise discord.errors.ApplicationCommandError("Cannot access the referenced message")
-        
+
         file = await image_to_gif(image, url)
         await ctx.edit(content = f"", file=file)
         os.remove(file.fp.name)
@@ -349,7 +349,7 @@ class Media(Cog):
         description="The URL of the media to download",
         type=str,
         required=True,
-    )   
+    )
     @discord.option(
         "format",
         description="The type of media to download",
@@ -390,7 +390,7 @@ class Media(Cog):
             await ctx.edit(content = f"Media is too big for discord, uploading to litterbox.catbox.moe instead {self.bot.get_emojis('loading_emoji')}")
             catbox_link = await upload_to_catbox(file)
             # get timestamp of 3 days from now in unix timestamp
-            
+
             timestamp = datetime.datetime.now() + datetime.timedelta(days=3)
             timestamp = int(timestamp.timestamp())
             timestamp = str(f"<t:{timestamp}:R>")
@@ -423,11 +423,11 @@ class Media(Cog):
     async def video_to_gif_command(self, ctx: Context, media: discord.Attachment = None, url: str = None):
         """Convert video to a gif"""
         await ctx.respond(content = f"Converting media to gif {self.bot.get_emojis('loading_emoji')}")
-        
+
         # Check if no options are provided
         if not media and not url:
             raise discord.errors.ApplicationCommandError("No media or URL provided")
-        
+
         # If url is a message ID, try to get the message and its attachments
         if url and url.isdigit():
             try:
@@ -441,7 +441,7 @@ class Media(Cog):
                 raise discord.errors.ApplicationCommandError("Message not found")
             except discord.Forbidden:
                 raise discord.errors.ApplicationCommandError("Cannot access the referenced message")
-        
+
         # Download the media if it's a URL
         if url:
             file = await download_media_ytdlp(url, "auto", "auto", "auto")
@@ -451,13 +451,13 @@ class Media(Cog):
                 async with session.get(media.url) as response:
                     if response.status != 200:
                         raise discord.errors.ApplicationCommandError("Failed to download media")
-                    
+
                     # Create a temporary file
                     with NamedTemporaryFile(prefix="utilitybelt_", suffix=f".{media.filename.split('.')[-1]}", delete=False) as temp_file:
                         temp_file.write(await response.read())
                         temp_file.seek(0)
                         file = discord.File(fp=temp_file.name)
-        
+
         # Upload to Imgur
         imgur_url = await upload_to_imgur(file)
         await ctx.edit(content = f"{imgur_url}")
@@ -476,19 +476,19 @@ class Media(Cog):
         await ctx.respond(content = f"Converting media to gif {self.bot.get_emojis('loading_emoji')}")
         if not message.attachments:
             raise discord.errors.ApplicationCommandError("No media attached to message")
-        
+
         # Download the attachment
         async with aiohttp.ClientSession() as session:
             async with session.get(message.attachments[0].url) as response:
                 if response.status != 200:
                     raise discord.errors.ApplicationCommandError("Failed to download media")
-                
+
                 # Create a temporary file
                 with NamedTemporaryFile(prefix="utilitybelt_", suffix=f".{message.attachments[0].filename.split('.')[-1]}", delete=False) as temp_file:
                     temp_file.write(await response.read())
                     temp_file.seek(0)
                     file = discord.File(fp=temp_file.name)
-        
+
         # Upload to Imgur
         imgur_url = await upload_to_imgur(file)
         await ctx.edit(content = f"{imgur_url}")
