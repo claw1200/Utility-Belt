@@ -161,8 +161,3 @@ class Notes(Cog):
         else:
             await ctx.respond(content="Note not found")
 
-
-
-def setup(bot):
-    bot.add_cog(Notes(bot))
-
