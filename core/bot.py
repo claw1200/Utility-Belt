@@ -7,7 +7,7 @@ from tortoise import Tortoise
 from .context import Context
 from .models import BotModel, UserModel
 
-class Bot(commands.Bot):
+class Bot(commands.AutoShardedBot):
     def __init__(self) -> None:
         super().__init__(
             allowed_mentions=discord.AllowedMentions.none(),
