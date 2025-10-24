@@ -8,8 +8,10 @@ from tempfile import NamedTemporaryFile
 import aiohttp
 import datetime
 import yt_dlp
+from yt_dlp.utils import ExtractorError, DownloadError
 import pyimgur
 from os import getenv
+import re
 
 async def image_to_gif(image, url):
     """Convert an image from a URL to a gif and return it as a file path"""
@@ -52,6 +54,12 @@ async def speech_bubble(image, url, overlay_y):
 
 
 async def download_media_ytdlp(url, download_mode, video_quality, audio_format):
+    # Sanitize URL to fix common malformations
+    # Fix double protocols like "https:https://" -> "https://"
+    url = re.sub(r'^(https?:)+', r'\1', url)
+    # Ensure proper protocol format
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
 
     ytdl_options = {
         "format": "best",
@@ -110,11 +118,10 @@ async def download_media_ytdlp(url, download_mode, video_quality, audio_format):
         #     format_note = format.get("format_note", "N/A")
         #     print(format_id, ext, height, vcodec, format_note, acodec)
 
-    except yt_dlp.DownloadError as e:
+    except DownloadError as e:
         raise discord.errors.ApplicationCommandError(f"Error: {e}")
-    except yt_dlp.ExtractorError as e:
+    except ExtractorError as e:
         raise discord.errors.ApplicationCommandError(f"Error: {e}")
-
 
     filepath = ytdl.prepare_filename(info)
 
