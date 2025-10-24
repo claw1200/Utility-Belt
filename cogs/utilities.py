@@ -12,6 +12,7 @@ from numpy import array
 import time
 import datetime
 import dateutil.parser
+from dateutil.parser import ParserError
 from os import getenv
 import aiohttp
 from difflib import SequenceMatcher
@@ -21,7 +22,7 @@ def convert_str_to_unix_time(string):
     # Parse the string into a time
     try:
         dt = dateutil.parser.parse(string)
-    except dateutil.parser._parser.ParserError:
+    except ParserError:
         return None
     # Convert the time object to a Unix timestamp and return it
     return int(time.mktime(dt.timetuple()))
@@ -278,7 +279,10 @@ def qr_code_text_generator(input=None, invert=False, white='█', black=' ', ver
         image = qr.make_image(fill_color=(0, 0, 0), back_color=(255, 255, 255))
     else:
         try:
-            image = Image.open(input)
+            # Use context manager to ensure file is properly closed
+            with Image.open(input) as img:
+                # Load image into memory and copy it so we can use it after closing
+                image = img.copy()
         except:
             raise ValueError("unable to open file")
 

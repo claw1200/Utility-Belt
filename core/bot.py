@@ -6,6 +6,7 @@ from discord.ext import commands
 from tortoise import Tortoise
 from .context import Context
 from .models import BotModel, UserModel
+import aiofiles
 
 class Bot(commands.AutoShardedBot):
     def __init__(self) -> None:
@@ -111,14 +112,16 @@ class Bot(commands.AutoShardedBot):
                 options_str = " | ".join(options)
 
                 #put error into file and send it to the webhook
-                with open("lastError.log", "w") as f:
-                    # ```\n{''.join(format_exception(type(error), error, error.__traceback__))}```
-                    f.write(f"{header}\nOptions: `{options_str}`\n{''.join(format_exception(type(error), error, error.__traceback__))}")
+                error_content = f"{header}\nOptions: `{options_str}`\n{''.join(format_exception(type(error), error, error.__traceback__))}"
+                async with aiofiles.open("lastError.log", "w") as f:
+                    await f.write(error_content)
                 
-                return await self.errors_webhook.send(
-                    f"{header}\nOptions: `{options_str}`\n",
-                    file=discord.File("lastError.log"),
-                )
+                # Use context manager to ensure file is properly closed
+                with open("lastError.log", "rb") as f:
+                    return await self.errors_webhook.send(
+                        f"{header}\nOptions: `{options_str}`\n",
+                        file=discord.File(f, filename="lastError.log"),
+                    )
             
         await ctx.edit(
             content="",

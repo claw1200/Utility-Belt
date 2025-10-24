@@ -30,7 +30,9 @@ async def get_user_avatar(user: discord.User):
 async def speech_bubble(image, url, overlay_y):
     """Add a speech bubble to an image"""
     overlay = "assets/speechbubble.png"
-    overlay = Image.open(overlay).convert("RGBA")
+    # Use context manager to ensure file is properly closed
+    with Image.open(overlay) as overlay_img:
+        overlay = overlay_img.convert("RGBA").copy()
 
     image = await utils.image_or_url(image, url)
     image = image.convert("RGBA")
@@ -122,20 +124,21 @@ async def download_media_ytdlp(url, download_mode, video_quality, audio_format):
 
 async def upload_to_catbox(file): # pass a discord.File object
     """Upload media to catbox.moe with curl and return the URL"""
-    file_raw = open(file.fp.name, "rb")
     file_type = file.filename.split(".")[-1]
-    data = aiohttp.FormData()
-    data.add_field("reqtype", "fileupload")
-    data.add_field("time", "72h")
-    data.add_field("fileToUpload", file_raw, filename="file.{}".format(file_type))
-    async with aiohttp.ClientSession() as session:
-        async def post(data) -> str:
-            async with session.post("https://litterbox.catbox.moe/resources/internals/api.php", data=data) as response:
-                text = await response.text()
-                if not response.ok:
-                    return None
-                return text
-        return await post(data)
+    # Use context manager to ensure file is properly closed
+    with open(file.fp.name, "rb") as file_raw:
+        data = aiohttp.FormData()
+        data.add_field("reqtype", "fileupload")
+        data.add_field("time", "72h")
+        data.add_field("fileToUpload", file_raw, filename="file.{}".format(file_type))
+        async with aiohttp.ClientSession() as session:
+            async def post(data) -> str:
+                async with session.post("https://litterbox.catbox.moe/resources/internals/api.php", data=data) as response:
+                    text = await response.text()
+                    if not response.ok:
+                        return None
+                    return text
+            return await post(data)
 
 async def upload_to_imgur(file): # pass a discord.File object
     """Upload media to Imgur using official API and return the URL"""

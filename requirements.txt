@@ -3,13 +3,14 @@ python-dotenv==1.0.1
 tortoise-orm==0.21.6
 jishaku==2.5.2
 aiohttp~=3.11.11
+aiofiles~=24.1.0
 beautifulsoup4==4.12.2
 bs4~=0.0.2
 qrcode==7.4.2
 pillow~=11.1.0
 pint~=0.24.4
 numpy~=2.2.1
-py-dateutil
+python-dateutil>=2.8.2
 requests~=2.32.3
 gradio_client
 yt_dlp
