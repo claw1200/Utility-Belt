@@ -13,10 +13,9 @@ def ai_image_gen(prompt, enhancer, img2img, img_seed, img_strength, img_steps): 
         # read config.json
         try:
             with open("config.json", "r") as f:
-                config = f.read()
-                config = json.loads(config)
-                prompt = config["ai_image_default_prompt"]
-        except FileNotFoundError:
+                config = json.loads(f.read())
+                prompt = config.get("ai_image_default_prompt", "A beautiful landscape with a sunset")
+        except (FileNotFoundError, json.JSONDecodeError):
             prompt = "A beautiful landscape with a sunset"
 
     if img2img != None:
@@ -71,10 +70,11 @@ def ai_image_gen(prompt, enhancer, img2img, img_seed, img_strength, img_steps): 
 
     ai_api_url = "diffusers/unofficial-SDXL-Turbo-i2i-t2i"
 
-    client = GradioClient(ai_api_url, output_dir="temp/")
-    result = client.predict(img2img, f"{prompt}", img_strength, img_steps, img_seed, api_name="/predict")
-    result = discord.File(fp=result, filename="image.png")
-    return result
+    # Use context manager to ensure client is properly closed (prevents file descriptor leaks)
+    with GradioClient(ai_api_url, output_dir="temp/") as client:
+        result = client.predict(img2img, f"{prompt}", img_strength, img_steps, img_seed, api_name="/predict")
+        result = discord.File(fp=result, filename="image.png")
+        return result
 
 async def unblocked_ai_image_gen(executor, prompt, enhancer, img2img, img_seed, img_strength, img_steps):
     loop = asyncio.get_running_loop()

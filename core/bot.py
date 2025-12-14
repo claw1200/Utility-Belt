@@ -116,12 +116,11 @@ class Bot(commands.AutoShardedBot):
                 async with aiofiles.open("lastError.log", "w") as f:
                     await f.write(error_content)
                 
-                # Use context manager to ensure file is properly closed
-                with open("lastError.log", "rb") as f:
-                    return await self.errors_webhook.send(
-                        f"{header}\nOptions: `{options_str}`\n",
-                        file=discord.File(f, filename="lastError.log"),
-                    )
+                # Let discord.File manage the file handle to ensure proper cleanup
+                return await self.errors_webhook.send(
+                    f"{header}\nOptions: `{options_str}`\n",
+                    file=discord.File("lastError.log"),
+                )
             
         await ctx.edit(
             content="",

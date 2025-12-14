@@ -98,36 +98,36 @@ async def download_media_ytdlp(url, download_mode, video_quality, audio_format):
         best
         """
 
-    ytdl = yt_dlp.YoutubeDL(ytdl_options)
+    # Use context manager to ensure YoutubeDL is properly closed (prevents file descriptor leaks)
+    with yt_dlp.YoutubeDL(ytdl_options) as ytdl:
+        # Run blocking operations in thread pool
+        loop = asyncio.get_event_loop()
+        try:
+            info = await loop.run_in_executor(
+                None,
+                partial(ytdl.extract_info, url, download=True),
+            )
 
-    # Run blocking operations in thread pool
-    loop = asyncio.get_event_loop()
-    try:
-        info = await loop.run_in_executor(
-            None,
-            partial(ytdl.extract_info, url, download=True),
-        )
+            # print available codecs
+            # for format in info["formats"]:
+            #     format_id = format.get("format_id", "N/A")
+            #     ext = format.get("ext", "N/A")
+            #     height = format.get("height", "N/A")
+            #     vcodec = format.get("vcodec", "N/A")
+            #     acodec = format.get("acodec", "N/A")
+            #     format_note = format.get("format_note", "N/A")
+            #     print(format_id, ext, height, vcodec, format_note, acodec)
 
-        # print available codecs
-        # for format in info["formats"]:
-        #     format_id = format.get("format_id", "N/A")
-        #     ext = format.get("ext", "N/A")
-        #     height = format.get("height", "N/A")
-        #     vcodec = format.get("vcodec", "N/A")
-        #     acodec = format.get("acodec", "N/A")
-        #     format_note = format.get("format_note", "N/A")
-        #     print(format_id, ext, height, vcodec, format_note, acodec)
+        except DownloadError as e:
+            raise discord.errors.ApplicationCommandError(f"Error: {e}")
+        except ExtractorError as e:
+            raise discord.errors.ApplicationCommandError(f"Error: {e}")
 
-    except DownloadError as e:
-        raise discord.errors.ApplicationCommandError(f"Error: {e}")
-    except ExtractorError as e:
-        raise discord.errors.ApplicationCommandError(f"Error: {e}")
+        filepath = ytdl.prepare_filename(info)
 
-    filepath = ytdl.prepare_filename(info)
+        print (filepath)
 
-    print (filepath)
-
-    return discord.File(fp=filepath)
+        return discord.File(fp=filepath)
 
 async def upload_to_catbox(file): # pass a discord.File object
     """Upload media to catbox.moe with curl and return the URL"""
